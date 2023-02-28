@@ -5,6 +5,8 @@ library(dplyr)
 library(plotly)
 library(shinythemes)
 library(stringr)
+library(leaflet)
+
 
 # Load and clean data ----------------------------------------------
 
@@ -71,7 +73,7 @@ sidebar <- dashboardSidebar(width=350,
                               
                               
                               # GDP per Capita Range Selection ----------------------------------------------
-                              sliderInput("gdp",
+                              sliderInput("dist",
                                           "Choose the distance from the airport:",
                                           min = min(amsterdam$dist, na.rm = T),
                                           max = max(amsterdam$dist, na.rm = T),
@@ -80,13 +82,12 @@ sidebar <- dashboardSidebar(width=350,
                                           step = 0.5),
                               
                               # Inputs: Narrow down or expand your geographical regions -------------------------
-                              selectInput("region",
+                              selectInput("room",
                                           "Select Room Type: ",
                                           choices = sort(unique(amsterdam$room_type)),
-                                          multiple = TRUE,
+                                          multiple = FALSE,
                                           selectize = TRUE,
                                           selected = c("Private room")),
-                              #selected = c("Private room"),
                               
                               hr(),
                               
@@ -102,6 +103,14 @@ sidebar <- dashboardSidebar(width=350,
                               # Input y-variable: selecting an input for y-axis (scatter plot)
                              selectInput("y_var", "Select the default price column", 
                                          choices = c("AirBnb Price" = "realSum"))
+                             
+                          #   selectInput("attr", "Select attribute to map", 
+                           #              choices = c("Cleanliness Rating" = "cleanliness_rating", 
+                            #                         "Guess Satisfaction Overall" = "guest_satisfaction_overall",
+                             #                        "Number of Bedrooms" = "bedrooms", 
+                              #                       "Distance from the city center" = "dist",
+                               #                      "Distance from the nearest metro station" = "metro_dist"
+                                #         )),
                               
                             )
 )
@@ -112,29 +121,29 @@ body <- dashboardBody(tabItems(
   # Plot page ----------------------------------------------
   tabItem("plot",
           
-          # Input and Value Boxes ----------------------------------------------
-          fluidRow(
-            infoBoxOutput("food"),
-            valueBoxOutput("female"),
-            valueBoxOutput('health')
-          ),
           
           # Plot ----------------------------------------------
           fluidRow(
             tabBox(title = "Data Visualization",
                    width = 12,
+                    #tabPanel(leafletOutput('map')),
                     tabPanel("Scatterplot", plotlyOutput("scatterplot")),
                   # tabPanel("Food Production", plotlyOutput("plot_food")),
                   # tabPanel("Women Leaders", plotlyOutput("plot_female")),
-                   tabPanel(" Room Type Pie-chart", plotlyOutput("piechart")))
+                    tabPanel(" Room Type Pie-chart", plotlyOutput("piechart")))
           )
   ),
   
   # Data Table Page ----------------------------------------------
   tabItem("table",
           fluidPage(
-            box(title = "Selected AirBnB", DT::dataTableOutput("table"), width = 12))
+            box(title = "Selected AirBnB", DT::dataTableOutput("table"), width = 12)),
+          
+          fluidPage(downloadButton('download_data', 'Dowload Data'))
   )
+  
+
+  
 )
 )
 
@@ -143,17 +152,41 @@ ui <- dashboardPage(header, sidebar, body, skin='purple')
 # Define server function required to create plots and value boxes -----
 server <- function(input, output) {
   
+  #data <- reactive({
+   # switch(input$x_var,
+    #       "Cleanliness Rating" = "cleanliness_rating", 
+     #      "Guess Satisfaction Overall" = "guest_satisfaction_overall",
+      #     "Number of Bedrooms" = "bedrooms", 
+       #    "Distance from the city center" = "dist",
+        #   "Distance from the nearest metro station" = "metro_dist")
+#  })
+  
+  # Create the map
+ # output$map <- renderLeaflet({
+  #  leaflet() %>%
+   #   addTiles() %>%
+    #  addProviderTiles(providers$OpenStreetMap) %>% 
+     # addCircles(data = amsterdam, 
+      #            fillColor = colorNumeric(palette = "Reds", domain = data())(data()),
+       #           stroke = FALSE,
+        #          #smoothFactor = 0.2,
+         #         fillOpacity = 0.7,
+          #        highlightOptions = highlightOptions(color = "white", weight = 2,
+           #                                           bringToFront = TRUE))
+#  })
+  
+  
   # Reactive data function -------------------------------------------
   swInput <- reactive({
     amsterdam_sub <- amsterdam %>%
       
       # GDP Per Capita Filter ----------------------------------------------
-    filter(dist >= input$gdp[1],
-           dist <= input$gdp[2]) # earlier was `dist`
+    filter(dist >= input$dist[1],
+           dist <= input$dist[2]) # earlier was `dist`
     
     # Region Filter ----------------------------------------------
-    if (length(input$region) > 0 ) {
-      amsterdam_sub <- subset(amsterdam, room_type %in% input$region)
+    if (length(input$room) > 0 ) {
+      amsterdam_sub <- subset(amsterdam, room_type %in% input$room)
     }
     
     # Return dataframe ----------------------------------------------
@@ -222,32 +255,15 @@ server <- function(input, output) {
     ))
   })
   
+  output$download_data <- downloadHandler(
+    filename = function() {
+      paste("data-", Sys.Date(), ".csv", sep="")
+    },
+    content = function(file){
+      write.csv(swInput(), file)
+    }
+  )
   
-  # food mean info box ----------------------------------------------
-  #output$food <- renderInfoBox({
-   # sw <- swInput()
-  #  num <- round(mean(sw$Food.production.index..2004.2006.100., na.rm = T), 2)
-    
-   # infoBox("Food Production Standing", value = num, subtitle = "Base Index = 100, Base Years: 2004-2006", 
-    #        icon = icon("balance-scale"), color = "purple")
-  #})
-  
-  # female mean value box ----------------------------------------------
-  #output$female <- renderValueBox({
-   # sw <- swInput()
-    #num <- round(mean(sw$Seats.held.by.women.in.national.parliaments.., na.rm = T), 2)
-    
-    #valueBox(subtitle = "Women Leader in Parliament (%)", value = num, icon = icon("sort-numeric-asc"), color = "green")
- # })
-  
-  # health output box ---------------------------------------------------
-  #output$health <- renderValueBox({
-   # sw <- swInput()
-    #num <- round(mean(sw$Health..Total.expenditure....of.GDP., na.rm = T), 2)
-    
-    #valueBox(subtitle = "Health Expenditure Share of GDP (%)", value = num, 
-     #        icon = icon("sort-numeric-asc"), color = "blue")
-  #})
   
 }
 
