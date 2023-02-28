@@ -110,3 +110,49 @@ n
 
 
 ```
+
+
+
+```{r}
+amsterdam <- read.csv('amsterdam_weekdays.csv')
+
+head(amsterdam,10)
+```
+
+```{r}
+
+amsterdam <- as.data.frame(amsterdam) %>% leaflet() 
+
+amsterdam2 <- amsterdam %>% 
+  addProviderTiles(providers$OpenStreetMap) %>%
+  addCircles()
+amsterdam2
+```
+
+
+```{r}
+
+us_covid <- read.csv('USA_covid_data.csv')
+head(us_covid,10)
+
+```
+
+```{r}
+latlong <- as.data.frame(read.csv('statelatlong.csv'))
+head(latlong,10)
+
+```
+
+
+```{r}
+
+leaflet(latlong) %>% addProviderTiles(providers$Esri.NatGeoWorldMap) %>% addCircles()
+
+```
+
+
+# Next steps: 
+
+1. Use amsterdam map 
+2. create input and everything
+3. learn about leafletproxy
