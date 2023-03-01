@@ -7,6 +7,10 @@ library(shinythemes)
 library(stringr)
 library(leaflet)
 
+# Next steps
+# 1. include a leaflet map in there
+# 2. The piechart is not working because I turned things to FALSE
+# 3. Download Handler
 
 # Load and clean data ----------------------------------------------
 
@@ -126,7 +130,7 @@ body <- dashboardBody(tabItems(
           fluidRow(
             tabBox(title = "Data Visualization",
                    width = 12,
-                    #tabPanel(leafletOutput('map')),
+                    tabPanel(leafletOutput('map')),
                     tabPanel("Scatterplot", plotlyOutput("scatterplot")),
                   # tabPanel("Food Production", plotlyOutput("plot_food")),
                   # tabPanel("Women Leaders", plotlyOutput("plot_female")),
@@ -151,6 +155,12 @@ ui <- dashboardPage(header, sidebar, body, skin='purple')
 
 # Define server function required to create plots and value boxes -----
 server <- function(input, output) {
+  
+  output$map <- renderLeaflet({
+    leaflet() %>% 
+      addProviderTiles(providers$OpenStreetMap) %>% 
+      addCircles(data = amsterdam, lat = ~lat, lng= ~lng)
+  })
   
   #data <- reactive({
    # switch(input$x_var,

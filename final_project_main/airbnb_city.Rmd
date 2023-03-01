@@ -32,6 +32,13 @@ amsterdam2
 2. create input and everything
 3. learn about leafletproxy
 
+```{r}
+leaflet() %>% 
+  addProviderTiles(providers$OpenStreetMap) %>% 
+  addCircles(data = amsterdam, lat = ~lat, lng= ~lng)
+
+```
+
 
 
 ```{r}
@@ -296,4 +303,52 @@ shinyApp(ui = ui, server = server)
 
 
 
+```
+
+
+```{r}
+data("USArrests")
+
+
+ui <- fluidPage(
+  titlePanel("US Arrests Dashboard"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("attribute", "Select Attribute to Map:",
+                  choices = c("Murder Rate" = "Murder",
+                              "Assault Rate" = "Assault",
+                              "Rape Rate" = "Rape"))
+    ),
+    mainPanel(
+      leafletOutput("map")
+    )
+  )
+)
+
+
+server <- function(input, output) {
+  
+  # Create a reactive expression to transform the USArrests data according to the user's selected attribute
+  data <- reactive({
+    switch(input$attribute,
+           "Murder" = USArrests$Murder,
+           "Assault" = USArrests$Assault,
+           "Rape" = USArrests$Rape)
+  })
+  
+  # Create the map
+  output$map <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      addPolygons(data = USArrests, 
+                  fillColor = colorNumeric(palette = "Reds", domain = data())(data()),
+                  stroke = FALSE,
+                  smoothFactor = 0.2,
+                  fillOpacity = 0.7,
+                  highlightOptions = highlightOptions(color = "white", weight = 2,
+                                                      bringToFront = TRUE))
+  })
+}
+
+shinyApp(ui = ui, server = server) 
 ```
