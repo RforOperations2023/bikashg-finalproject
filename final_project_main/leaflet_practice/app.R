@@ -25,8 +25,8 @@ server <- function(input, output, session) {
         addPolygons(data = sp::SpatialPolygons(list(sp::Polygons(list(sp::Polygon(rbind(c(-118, 34), c(-118, 36), c(-116, 36), c(-116, 34)))))),
                                                fillColor = "red",
                                                fillOpacity = input$layer_opacity)
-    }
-  }))
+    )}
+  })
       
       # Add lines to map
       observe({

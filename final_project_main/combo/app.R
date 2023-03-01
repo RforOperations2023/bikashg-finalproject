@@ -8,6 +8,17 @@ library(plotly)
 library(stringr)
 library(DT)
 
+# To Dos:
+# 1. Clean this one more time before the class
+# 2. Clarify what two different types of layer is sought
+# 3. Is use of the leaflet proxy sufficient in this case?
+# 4. Why am I downloading in HTML? 
+# 5. Extra credit: Students who use one or more API's to feed either their map or 
+# data displayed will receive up to 20 Bonus points on the assignment. Will I have to redo?
+# 6. Can I keep everything same? Just import new data.
+# 7. I need extra points. How much of the bump would the extra credit bring to me? 
+
+
 amsterdam <- read.csv('amsterdam_weekdays.csv') %>% 
   mutate(realSum = round(realSum,0))
 
@@ -49,7 +60,13 @@ ui <- dashboardPage(
                                 )
                    )
   ),
-  dashboardSidebar(
+  dashboardSidebar(width = 350, 
+    sidebarMenu(id = "tabs",
+    
+    # Menu Items ----------------------------------------------
+    menuItem("Source Code", icon=icon("code"), 
+             href="https://github.com/RforOperations2023/bikashg-finalproject")),
+    
     sliderInput("range", "Price Range", min(amsterdam$realSum), max(amsterdam$realSum),
                 value = range(amsterdam$realSum), step = 1),
     selectInput("colors", "Color Scheme",
@@ -70,11 +87,12 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     tabsetPanel(
-      tabPanel("Map", leafletOutput("map", width = "100%", height = "600px")),
+      tabPanel("Map", leafletOutput("map", width = "100%", height = "650px")),
       tabPanel("Scatterplot", plotlyOutput("scatterplot")),
+      tabPanel(" Room Type Pie-chart", plotlyOutput("piechart")),
       tabPanel("Data Table", dataTableOutput("table"),
-               downloadButton('dowloadData', 'Download Data')),
-      tabPanel(" Room Type Pie-chart", plotlyOutput("piechart"))
+               downloadButton('dowloadData', 'Download Data'))
+      
 
     )
     
@@ -111,8 +129,11 @@ server <- function(input, output) {
     
     leafletProxy("map", data = filteredData()) %>%
       clearShapes() %>%
-      addCircles(weight = 5, color = "#777777",
-                 fillColor = ~pal(realSum), fillOpacity = 0.7, popup = ~paste(realSum)
+      addCircles(weight = 10, color = "#777777",
+                 fillColor = ~pal(realSum), fillOpacity = 0.9, popup = ~paste('Price:','$',round(realSum,0),
+                                                                              '<br>', 'Distance From the City Center: ', round(dist,2),'km',
+                                                                              '<br>', 'Distance From the Nearest Metro: ', 
+                                                                              round(metro_dist,2),'km') 
       ) %>%
       addMarkers(clusterOptions = markerClusterOptions())
   })
@@ -168,7 +189,7 @@ server <- function(input, output) {
     if (input$legend) {
       pal <- colorpal()
       proxy %>% addLegend(position = "bottomright",
-                          pal = pal, values = ~realSum
+                          pal = pal, values = ~realSum, title = 'AirBnb Price'
       )
     }
   })
