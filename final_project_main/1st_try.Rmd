@@ -156,3 +156,10 @@ leaflet(latlong) %>% addProviderTiles(providers$Esri.NatGeoWorldMap) %>% addCirc
 1. Use amsterdam map 
 2. create input and everything
 3. learn about leafletproxy
+
+
+```{r}
+url <- paste0("https://api.data.amsterdam.nl/v1/winkelgebieden/winkelgebieden/?_format=geojson", "&categorienaam=", 'Buurtcentrum')
+url
+
+```
