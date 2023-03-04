@@ -1,3 +1,21 @@
+## Bikash Gupta
+
+
+# Description of the project: Amsterdam is a popular tourist destination, receiving more than 15 million 
+# visitors a year. Thousands of tourists look for AirBnb each day. These tourists also look for relevant information
+# regarding housing and sites. This dashboard allows user to navigate the prices of airbnb scattered in the city.
+# Additionally, it offers official information on various places such as world heritage sites. It also has
+# maps that allows user to find relationships between various variables by playing with widget. 
+
+
+### ====================== Install the following packages if not already ==================
+
+# uncomment the line to install packages, if not already
+
+# install.packages(c('shiny', 'leaflet', 'RColorBrewer', 'dplyr', 'shinydashboard', 'ggplot2',
+#                   'plotly', 'stringr', 'DT', 'httr','rjson', 'sf'))
+
+### =================== Running the libraries ======================
 library(shiny)
 library(leaflet)
 library(RColorBrewer)
@@ -7,61 +25,40 @@ library(ggplot2)
 library(plotly)
 library(stringr)
 library(DT)
+library(httr)
+library(rjson)
+library(sf)
 
-# To Dos:
-# 1. One leaflet map requirements: (?) 
-# 2. download HTML is not working 
-# 3. tethering scatter plot to price range
 
-# 2. Clarify what two different types of layer is sought
-# 3. Is use of the leaflet proxy sufficient in this case?
-# 4. Why am I downloading in HTML? 
-# 5. Extra credit: Students who use one or more API's to feed either their map or 
-# data displayed will receive up to 20 Bonus points on the assignment. Will I have to redo?
-# 6. Can I keep everything same? Just import new data.
-# 7. I need extra points. How much of the bump would the extra credit bring to me? 
-
-#====
-
-## TO DOS
-# 1. I can have multiple amsterdam json file from this website:
-# https://maps.amsterdam.nl/open_geodata/?LANG=en
-# 2. I can create multiple map object
-# 3. I can add them leaflet() %>% addCircles or addPolygons 
-# 4. I can create interactive layer 
-# 5. Clean the dashboard
-# 6. If possible, add a photo (see google chat)
-
-# To get various json file 
+###========================== Amsterdam File ================================
 
 amsterdam <- read.csv('amsterdam_weekdays.csv') %>% 
   mutate(realSum = round(realSum,0)) %>% 
   filter(realSum <= 4000)
 
-# market 
-#t1 <- GET("https://maps.amsterdam.nl/open_geodata/geojson_lnglat.php?KAARTLAAG=MARKTEN&THEMA=markten")
 
-# world heritage site: 
-t1 <- GET("https://maps.amsterdam.nl/open_geodata/geojson_lnglat.php?KAARTLAAG=UNESCO&THEMA=cultuurhistorie")
+### ========================== JSON Files =============================
 
-#t_list = list(t0, t1)
 
-#t <- GET("https://api.data.amsterdam.nl/v1/winkelgebieden/winkelgebieden/?_format=geojson&categorienaam=Buurtcentrum")
-t2 <- st_read(content(t1, "text"))
-#plot(t2)
+# we will be using these JSON files straight from Amsterdam's local government website:
 
-# Here is what I can do, [This does not work]
-# have multiple links name: t1, t2, t3, t4, t5
-# select input, or drop down menu, where input = c(t1, t2, t3, t4)
-# t2 <- st_read(content(input$fromabove, "text"))
+# historical building
+history_building <- GET("https://maps.amsterdam.nl/open_geodata/geojson_lnglat.php?KAARTLAAG=HISTORISCHE_BEBOUWING&THEMA=archeologie")
+history_b_json <- st_read(content(history_building, "text"))
 
-#leaflet(t2) %>% addProviderTiles(providers$OpenStreetMap) %>% addPolygons()
+# world heritage site
+whs <- GET("https://maps.amsterdam.nl/open_geodata/geojson_lnglat.php?KAARTLAAG=UNESCO&THEMA=cultuurhistorie")
+whs_json <- st_read(content(whs, "text"))
+
+
+### =========================== UI Server ===================================
 
 
 ui <- dashboardPage(
   dashboardHeader(title = "Amsterdam AirBnb Price Dashboard", titleWidth = 350,
                    
                    # Drop down menu with hard coded values ------------------------------
+                  
                    dropdownMenu(type = "notifications",
                                 notificationItem(text = "Check your upcoming trip to Amsterdam!", 
                                                  icon = icon("globe")),
@@ -99,23 +96,33 @@ ui <- dashboardPage(
   dashboardSidebar(width = 350, 
     sidebarMenu(id = "tabs",
     
-    # Menu Items ----------------------------------------------
+    # Source Code Link ----------------------------------------------
+    
     menuItem("Source Code", icon=icon("code"), 
              href="https://github.com/RforOperations2023/bikashg-finalproject")),
     
-    sliderInput("range", "Price Range", min(amsterdam$realSum), max(amsterdam$realSum),
+    
+    # Price Range Slider----------------------------------------------
+    
+    sliderInput("range", "Choose the AirBnb Price Range", min(amsterdam$realSum), max(amsterdam$realSum),
                 value = range(amsterdam$realSum), step = 1),
+    
+    
+    # Drop Down Menu for Color Palette----------------------------------------------
     
     selectInput("colors", "Choose color schemes for your Legend:",
                 rownames(subset(brewer.pal.info, category %in% c("seq", "div")))),
     
-    #selectInput('maps_choice', "sketch your map",
-     #           choices = c('t0', 't1')),
     
-    checkboxInput("showPolygons", label='Show Polygons', value=TRUE),
-    
+    # A horizontal line for visual distinction----------------------------------------------
     hr(),
-    selectInput("x_var", "Select room/place characteristics", 
+    
+    h5('For Scatterplot, choose from the following:', align = 'center'),
+
+        
+    # X-variable for scatter plot ----------------------------------------------
+    
+    selectInput("x_var", "Select room/place characteristics: ", 
                 choices = c("Distance from the city center" = "dist",
                             "Cleanliness Rating" = "cleanliness_rating", 
                             "Guess Satisfaction Overall" = "guest_satisfaction_overall",
@@ -123,33 +130,55 @@ ui <- dashboardPage(
                             "Distance from the nearest metro station" = "metro_dist"
                 )),
     
-    ####========
-    actionButton("submit", "Submit"),
-    ###==========
+
+    # Y- variable: selecting an input for y-axis (scatter plot)----------------------
     
-    # Input y-variable: selecting an input for y-axis (scatter plot)
-    selectInput("y_var", "Select the default price column", 
+    selectInput("y_var", "Select the default price column: ", 
                 choices = c("AirBnb Price" = "realSum")),
+    
+    
+    # Legend Checkbox --------------------------------------------------
     checkboxInput("legend", "Show legend", TRUE)
+    
   ),
+  
+  ### ---------------------------------Dashboard Body
+  
   dashboardBody(
+    
+    # Altogether 5 Tab Panels: Includes two maps, scatterplot, piechart, and table:
+    
     tabsetPanel(
-      tabPanel("Map", leafletOutput("map", width = "100%", height = "650px")),
-      tabPanel("Map2", leafletOutput("map2", width = "100%", height = "650px")),
-      tabPanel("Scatterplot", plotlyOutput("scatterplot")),
-      tabPanel(" Room Type Pie-chart", plotlyOutput("piechart")),
-      tabPanel("Data Table", dataTableOutput("table"),
-               downloadButton('downloadData', 'Download Data'))
+      tabPanel("AirBnB Rooms", leafletOutput("map", width = "100%", height = "650px"),icon=icon('globe')),
       
+      tabPanel("Amsterdam Sites", leafletOutput("map2", width = "100%", height = "650px"), icon=icon('city')),
+      
+      tabPanel("Scatterplot", 
+      h4('Select', span(em("from the drop down menus on your left"), style='color:green'), 
+      "the variables for the scatterplot. Important to note that price is the only dependent variable."),
+      plotlyOutput("scatterplot"), icon=icon('chart-simple')),
+      
+      tabPanel(" Room Type Pie-chart", 
+      h4('Toggle the', span(em("price range widget"), style='color:green'), 
+      "on your left to see how the proportions of room type changes."),
+      plotlyOutput("piechart"), icon=icon('chart-pie')),
+      
+      tabPanel("Data Table", dataTableOutput("table"), icon=icon('table'), br(), 
+      p('To download the reactive table, please click the download button below.'),
+      downloadButton('downloadData', 'Download Data'))
 
     )
     
   )
 )
 
+
+### ===================================== Server ==============================
+
 server <- function(input, output) {
   
-  # Reactive expression for the data subsetted to what the user selected
+  # Reactive expression for the data subsetted to what the user selected -----------------------
+  
   filteredData <- reactive({
     amsterdam[amsterdam$realSum >= input$range[1] & amsterdam$realSum <= input$range[2],]
   })
@@ -167,10 +196,11 @@ server <- function(input, output) {
       fitBounds(~min(lng), ~min(lat), ~max(lng), ~max(lat))
   })
   
-  # Incremental changes to the map (in this case, replacing the
-  # circles when a new color is chosen) should be performed in
-  # an observer. Each independent set of things that can change
-  # should be managed in its own observer.
+  
+  # Incremental changes to the map (in this case, replacing the circles when a new color is chosen) should be performed in
+  # an observer. Each independent set of things that can change should be managed in its own observer.
+  
+  # First Map --------------------------------------------------------------------------
   
   observe({
     pal <- colorpal()
@@ -183,59 +213,49 @@ server <- function(input, output) {
                                 '<br>', 'Distance From the City Center: ', round(dist,2),'km',
                                 '<br>', 'Distance From the Nearest Metro: ',
                                 round(metro_dist,2),'km') 
+                 
       ) %>%
       addMarkers(clusterOptions = markerClusterOptions()) %>% 
       addTiles(group = "OSM (default)") %>%
       addProviderTiles(providers$Esri.WorldStreetMap, group = "Esri") %>%
       addLayersControl(
-        baseGroups = c("OSM (default)", "Esri")) #,
-       # #overlayGroups = c("Quakes", "Outline"),
-       # options = layersControlOptions(collapsed = FALSE)) 
+        baseGroups = c("OSM (default)", "Esri"))
   })
   
-  #===========
+  # Second Map --------------------------------------------------------------------------
   
   output$map2 <- renderLeaflet({
     leaflet() %>%
       addProviderTiles("OpenStreetMap.Mapnik") %>%
-      addPolygons(data = t2, fillColor = "red", fillOpacity = 0.5, weight = 2, popup = ~as.character('gebiedsnaam'), group = "Polygons") %>%
-      addCircleMarkers(data = filteredData(), weight =1, color = "blue", stroke = FALSE, fillOpacity = 0.8, popup = ~as.character(realSum), group = "Points") %>%
-      addLayersControl(overlayGroups = c("Polygons", "Points"), options = layersControlOptions(collapsed = FALSE))
+      setView(lng = 4.9041,lat =52.3676, zoom=15) %>% 
+      addPolygons(data = whs_json, fillColor = "red", fillOpacity = 0.5, weight = 2, popup = ~as.character('UNESCO World Heritage Area'), group = "World Heritage Site") %>%
+      addCircles(data = filteredData(), weight =10, color = "blue", stroke = FALSE, fillOpacity = 0.8, 
+                 popup = ~paste('Price:','$',round(realSum,0),
+                                        '<br>', 'Distance From the City Center: ', round(dist,2),'km',
+                                        '<br>', 'Distance From the Nearest Metro: ',
+                                        round(metro_dist,2),'km'), group = "AirBnb") %>%
+      addCircleMarkers(data = history_b_json, weight =1, color = "green", stroke = TRUE, fillOpacity = 0.8,
+                       popup = ~paste('Site Name:', Naam,
+                                      '<br>', 'Main Group: ', Hoofdgroep,
+                                      '<br>', 'Begin: ', Begin,
+                                      '<br>', 'End: ', Eind,
+                                      '<br>', 'Selection: ', SELECTIE),group = "Historical Places") %>%
+      addLayersControl(overlayGroups = c("World Heritage Site","AirBnb", "Historical Places"), options = layersControlOptions(collapsed = FALSE))
     
-    #leaflet(t2) %>% addProviderTiles(providers$OpenStreetMap) %>% 
-      #addCircleMarkers()
-      #addPolygons(color = "#444444", weight = 1, smoothFactor = 0.5,
-       #           opacity = 1.0, fillOpacity = 0.5,
-        #          fillColor = 'red', # ~colorQuantile("YlOrRd"), #ALAND)(ALAND),
-         #         highlightOptions = highlightOptions(color = "white", weight = 2,
-          #                                            bringToFront = TRUE))
+
   })
   
   
+  # Scatterplot ----------------------------------------------------------
   
-  ##==================
-  
-  #observeEvent(input$submit, {
-   # url <- paste0("https://api.data.amsterdam.nl/v1/winkelgebieden/winkelgebieden/?_format=geojson", "&categorienaam=", 'Buurtcentrum')
-    #response <- GET(url)
-    #data_map <- st_read(content(response, "text"))
-    
-    #data_map <- content(response)
-    #leafletProxy("map2") %>% addPolygons(data=data_map)
-    #data_map %>% leafletProxy("map2") %>% setView(lng=52.3676, lat=4.9041) %>% addPolygons()
-  #})
-
-  
-  #===============
-  
-  
-  # Scatterplot output
   output$scatterplot <- renderPlotly({
     ggplot(filteredData(), aes_string(x = input$x_var, y = input$y_var)) + 
       geom_point() + labs(x = str_replace_all(input$x_var, "[.]", " "),
                           y = str_replace_all(input$y_var, "[.]", " ")) 
   })
   
+  
+  # Pie-chart ----------------------------------------------------------
   
   output$piechart <- renderPlotly({
     pie_data <- filteredData() %>%
@@ -259,6 +279,7 @@ server <- function(input, output) {
     ))
   })
   
+  # Download data button -------------------------------------------------------
   
   output$downloadData <- downloadHandler(
     filename = function() {
@@ -269,7 +290,8 @@ server <- function(input, output) {
     }
   ) 
   
-  # Use a separate observer to recreate the legend as needed.
+  # Use a separate observer to recreate the legend as needed----------------------
+  
   observe({
     proxy <- leafletProxy("map", data = filteredData())
     
