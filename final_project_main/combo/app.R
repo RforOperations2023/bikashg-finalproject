@@ -1,11 +1,11 @@
 ## Bikash Gupta
 
 
-# Description of the project: Amsterdam is a popular tourist destination, receiving more than 15 million 
+# Description of the project: Amsterdam is a popular tourist destination, which welcomes more than 15 million 
 # visitors a year. Thousands of tourists look for AirBnb each day. These tourists also look for relevant information
-# regarding housing and sites. This dashboard allows user to navigate the prices of airbnb scattered in the city.
+# regarding housing and touristy sites. This dashboard allows user to navigate the prices of airbnb rooms scattered across the city.
 # Additionally, it offers official information on various places such as world heritage sites. It also has
-# maps that allows user to find relationships between various variables by playing with widget. 
+# maps that allows user to find relationships between various variables by playing with widgets on the sidebar. 
 
 
 ### ====================== Install the following packages if not already ==================
@@ -93,6 +93,9 @@ ui <- dashboardPage(
                                 )
                    )
   ),
+  
+  # Dashboard Sidebar --------------------------------------------------
+  
   dashboardSidebar(width = 350, 
     sidebarMenu(id = "tabs",
     
@@ -142,7 +145,7 @@ ui <- dashboardPage(
     
   ),
   
-  ### ---------------------------------Dashboard Body
+  ### ---------------------------------Dashboard Body------------------------------
   
   dashboardBody(
     
@@ -153,12 +156,12 @@ ui <- dashboardPage(
       
       tabPanel("Amsterdam Sites", leafletOutput("map2", width = "100%", height = "650px"), icon=icon('city')),
       
-      tabPanel("Scatterplot", 
+      tabPanel("Scatterplot", br(),
       h4('Select', span(em("from the drop down menus on your left"), style='color:green'), 
       "the variables for the scatterplot. Important to note that price is the only dependent variable."),
       plotlyOutput("scatterplot"), icon=icon('chart-simple')),
       
-      tabPanel(" Room Type Pie-chart", 
+      tabPanel(" Room Type Pie-chart", br(),
       h4('Toggle the', span(em("price range widget"), style='color:green'), 
       "on your left to see how the proportions of room type changes."),
       plotlyOutput("piechart"), icon=icon('chart-pie')),
@@ -197,8 +200,9 @@ server <- function(input, output) {
   })
   
   
-  # Incremental changes to the map (in this case, replacing the circles when a new color is chosen) should be performed in
-  # an observer. Each independent set of things that can change should be managed in its own observer.
+  # Incremental changes to the map (in this case, replacing the circles when a new color is chosen) 
+  # should be performed in an observer. Each independent set of things that 
+  # can change should be managed in its own observer.
   
   # First Map --------------------------------------------------------------------------
   
@@ -228,19 +232,25 @@ server <- function(input, output) {
     leaflet() %>%
       addProviderTiles("OpenStreetMap.Mapnik") %>%
       setView(lng = 4.9041,lat =52.3676, zoom=15) %>% 
-      addPolygons(data = whs_json, fillColor = "red", fillOpacity = 0.5, weight = 2, popup = ~as.character('UNESCO World Heritage Area'), group = "World Heritage Site") %>%
+      
+      addPolygons(data = whs_json, fillColor = "red", fillOpacity = 0.5, weight = 2, 
+                  popup = ~as.character('UNESCO World Heritage Area'), group = "World Heritage Site") %>%
+      
       addCircles(data = filteredData(), weight =10, color = "blue", stroke = FALSE, fillOpacity = 0.8, 
                  popup = ~paste('Price:','$',round(realSum,0),
                                         '<br>', 'Distance From the City Center: ', round(dist,2),'km',
                                         '<br>', 'Distance From the Nearest Metro: ',
                                         round(metro_dist,2),'km'), group = "AirBnb") %>%
+      
       addCircleMarkers(data = history_b_json, weight =1, color = "green", stroke = TRUE, fillOpacity = 0.8,
                        popup = ~paste('Site Name:', Naam,
                                       '<br>', 'Main Group: ', Hoofdgroep,
                                       '<br>', 'Begin: ', Begin,
                                       '<br>', 'End: ', Eind,
                                       '<br>', 'Selection: ', SELECTIE),group = "Historical Places") %>%
-      addLayersControl(overlayGroups = c("World Heritage Site","AirBnb", "Historical Places"), options = layersControlOptions(collapsed = FALSE))
+      
+      addLayersControl(overlayGroups = c("World Heritage Site","AirBnb", "Historical Places"),
+                       options = layersControlOptions(collapsed = FALSE))
     
 
   })
